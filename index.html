@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Streaming with WebRTC</title>
+  <style>
+    video {
+      width: 45%;
+      margin: 2%;
+    }
+  </style>
+</head>
+<body>
+  <h2>Live Streaming with WebRTC</h2>
+  <video id="localVideo" autoplay muted></video>
+  <video id="remoteVideo" autoplay></video>
+
+  <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const peerConnectionConfig = {
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    };
+
+    const peerConnection = new RTCPeerConnection(peerConnectionConfig);
+
+    // Get user media
+    async function getMedia() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('localVideo').srcObject = stream;
+        stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+      } catch (error) {
+        console.error('Error accessing media devices.', error);
+        alert('Error accessing media devices.');
+      }
+    }
+
+    getMedia();
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', event.candidate);
+      }
+    };
+
+    socket.on('ice-candidate', (candidate) => {
+      peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    });
+
+    peerConnection.ontrack = (event) => {
+      document.getElementById('remoteVideo').srcObject = event.streams[0];
+    };
+
+    socket.on('offer', async (offer) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      socket.emit('answer', answer);
+    });
+
+    socket.on('answer', async (answer) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    async function createOffer() {
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      socket.emit('offer', offer);
+    }
+
+    createOffer();
+
+    // Track meeting duration
+    let startTime;
+    const meetingDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+    function startMeetingTimer() {
+      startTime = Date.now();
+      setInterval(() => {
+        if (Date.now() - startTime > meetingDuration) {
+          alert('Meeting time is up!');
+          window.location.reload(); // Reload or end meeting
+        }
+      }, 1000);
+    }
+
+    startMeetingTimer();
+  </script>
+</body>
+</html>
