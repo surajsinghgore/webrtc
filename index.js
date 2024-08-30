@@ -28,6 +28,11 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('ice-candidate', data);
   });
 
+  // Handle chat messages
+  socket.on('chat-message', (message) => {
+    io.emit('chat-message', message); // Broadcast to all connected clients
+  });
+
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log('user disconnected');

@@ -1,18 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Live Streaming with WebRTC</title>
+  <title>Live Streaming with WebRTC and Chat</title>
   <style>
     video {
       width: 45%;
       margin: 2%;
     }
+    #chat {
+      margin-top: 20px;
+    }
+    #messages {
+      border: 1px solid #ccc;
+      height: 200px;
+      overflow-y: scroll;
+      padding: 5px;
+    }
+    #messageInput {
+      width: 80%;
+    }
   </style>
 </head>
 <body>
-  <h2>Live Streaming with WebRTC</h2>
+  <h2>Live Streaming with WebRTC and Chat</h2>
   <video id="localVideo" autoplay muted></video>
   <video id="remoteVideo" autoplay></video>
+
+  <div id="chat">
+    <div id="messages"></div>
+    <input id="messageInput" type="text" placeholder="Type a message" />
+    <button id="sendMessage">Send</button>
+  </div>
 
   <script src="http://localhost:3000/socket.io/socket.io.js"></script>
   <script>
@@ -70,21 +88,26 @@
 
     createOffer();
 
-    // Track meeting duration
-    let startTime;
-    const meetingDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+    // Chat functionality
+    const messagesElement = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const sendMessageButton = document.getElementById('sendMessage');
 
-    function startMeetingTimer() {
-      startTime = Date.now();
-      setInterval(() => {
-        if (Date.now() - startTime > meetingDuration) {
-          alert('Meeting time is up!');
-          window.location.reload(); // Reload or end meeting
-        }
-      }, 1000);
-    }
+    socket.on('chat-message', (message) => {
+      const messageElement = document.createElement('div');
+      messageElement.textContent = message;
+      messagesElement.appendChild(messageElement);
+      messagesElement.scrollTop = messagesElement.scrollHeight; // Scroll to the bottom
+    });
 
-    startMeetingTimer();
+    sendMessageButton.addEventListener('click', () => {
+      const message = messageInput.value;
+      if (message) {
+        socket.emit('chat-message', message);
+        messageInput.value = '';
+      }
+    });
+
   </script>
 </body>
 </html>
