@@ -135,4 +135,10 @@
     sendMessageButton.addEventListener('click', () => {
       const message = messageInput.value;
       if (message) {
-   
+        socket.emit('chat-message', message);
+        messageInput.value = '';
+      }
+    });
+  </script>
+</body>
+</html>
