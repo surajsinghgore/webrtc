@@ -39,7 +39,7 @@ io.on('connection', (socket) => {
   socket.on('offer', (data) => {
     const room = rooms[data.roomId];
     if (room) {
-      socket.to(room.viewers).emit('offer', data.offer);
+      socket.to(data.roomId).emit('offer', data.offer); // Correctly broadcast the offer to all viewers in the room except the presenter
     }
   });
 
@@ -55,7 +55,7 @@ io.on('connection', (socket) => {
   socket.on('ice-candidate', (data) => {
     const room = rooms[data.roomId];
     if (room) {
-      socket.to(room.presenter).emit('ice-candidate', data.candidate);
+      socket.to(data.target).emit('ice-candidate', data.candidate); // Send ICE candidate to the appropriate peer
     }
   });
 

@@ -90,7 +90,7 @@
 
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          socket.emit('ice-candidate', { candidate: event.candidate, roomId });
+          socket.emit('ice-candidate', { candidate: event.candidate, roomId, target: isPresenter ? roomId : rooms[roomId].presenter });
         }
       };
 
@@ -135,10 +135,4 @@
     sendMessageButton.addEventListener('click', () => {
       const message = messageInput.value;
       if (message) {
-        socket.emit('chat-message', message);
-        messageInput.value = '';
-      }
-    });
-  </script>
-</body>
-</html>
+   
