@@ -41,15 +41,24 @@
 
     const peerConnection = new RTCPeerConnection(peerConnectionConfig);
 
-    // Get user media
+    // Check if user is a streamer or viewer
+    const isStreamer = window.location.search.includes('role=streamer');
+
+    // Get user media for the streamer
     async function getMedia() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById('localVideo').srcObject = stream;
-        stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-      } catch (error) {
-        console.error('Error accessing media devices.', error);
-        alert('Error accessing media devices.');
+      if (isStreamer) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          document.getElementById('localVideo').srcObject = stream;
+          stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+          // Create an offer for viewers
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+          socket.emit('offer', offer);
+        } catch (error) {
+          console.error('Error accessing media devices.', error);
+          alert('Error accessing media devices.');
+        }
       }
     }
 
@@ -70,44 +79,45 @@
     };
 
     socket.on('offer', async (offer) => {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      socket.emit('answer', answer);
+      if (!isStreamer) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('answer', answer);
+      }
     });
 
     socket.on('answer', async (answer) => {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      if (isStreamer) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      }
     });
-
-    async function createOffer() {
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      socket.emit('offer', offer);
-    }
-
-    createOffer();
 
     // Chat functionality
     const messagesElement = document.getElementById('messages');
     const messageInput = document.getElementById('messageInput');
     const sendMessageButton = document.getElementById('sendMessage');
 
-    socket.on('chat-message', (message) => {
-      const messageElement = document.createElement('div');
-      messageElement.textContent = message;
-      messagesElement.appendChild(messageElement);
-      messagesElement.scrollTop = messagesElement.scrollHeight; // Scroll to the bottom
-    });
+    if (!isStreamer) {
+      // Chat functionality only for viewers
+      socket.on('chat-message', (message) => {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        messagesElement.appendChild(messageElement);
+        messagesElement.scrollTop = messagesElement.scrollHeight; // Scroll to the bottom
+      });
 
-    sendMessageButton.addEventListener('click', () => {
-      const message = messageInput.value;
-      if (message) {
-        socket.emit('chat-message', message);
-        messageInput.value = '';
-      }
-    });
-
+      sendMessageButton.addEventListener('click', () => {
+        const message = messageInput.value;
+        if (message) {
+          socket.emit('chat-message', message);
+          messageInput.value = '';
+        }
+      });
+    } else {
+      // Hide chat interface for streamer
+      document.getElementById('chat').style.display = 'none';
+    }
   </script>
 </body>
 </html>
