@@ -7,12 +7,11 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
-// Generate and store room information
+// Store rooms and their participants
 const rooms = {};
 
 io.on('connection', (socket) => {
@@ -36,27 +35,27 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle offer
+  // Handle offer from presenter
   socket.on('offer', (data) => {
-    const room = Object.values(rooms).find(r => r.presenter === socket.id);
+    const room = rooms[data.roomId];
     if (room) {
-      socket.to(room.presenter).emit('offer', data);
+      socket.to(room.viewers).emit('offer', data.offer);
     }
   });
 
-  // Handle answer
+  // Handle answer from viewer
   socket.on('answer', (data) => {
-    const room = Object.values(rooms).find(r => r.presenter === socket.id);
+    const room = rooms[data.roomId];
     if (room) {
-      socket.to(room.presenter).emit('answer', data);
+      socket.to(room.presenter).emit('answer', data.answer);
     }
   });
 
   // Handle ICE candidates
   socket.on('ice-candidate', (data) => {
-    const room = Object.values(rooms).find(r => r.presenter === socket.id);
+    const room = rooms[data.roomId];
     if (room) {
-      socket.to(room.presenter).emit('ice-candidate', data);
+      socket.to(room.presenter).emit('ice-candidate', data.candidate);
     }
   });
 
@@ -69,17 +68,16 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('user disconnected');
     // Remove user from rooms
-    Object.values(rooms).forEach(room => {
+    Object.entries(rooms).forEach(([roomId, room]) => {
       if (room.presenter === socket.id) {
-        // Remove room
-        io.to(room.presenter).emit('room-closed');
-        delete rooms[room.roomId];
+        // Close room if the presenter disconnects
+        io.to(roomId).emit('room-closed');
+        delete rooms[roomId];
       } else {
         // Remove viewer
         room.viewers = room.viewers.filter(id => id !== socket.id);
         if (room.viewers.length === 0) {
           io.to(room.presenter).emit('room-closed');
-          delete rooms[room.roomId];
         }
       }
     });
