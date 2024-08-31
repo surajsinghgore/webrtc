@@ -34,6 +34,7 @@ io.on('connection', socket => {
         socket.to(roomId).emit('chat-message', message);
     });
 
+    
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
