@@ -14,19 +14,18 @@
 </head>
 <body>
     <h1>Live Stream</h1>
-    <button id="startView">Start Viewing</button>
     <video id="remoteVideo" autoplay playsinline></video>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         const remoteVideo = document.getElementById('remoteVideo');
-        const startViewButton = document.getElementById('startView');
 
         let peerConnection;
         const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-        startViewButton.onclick = () => {
+        // Automatically start viewing when the page loads
+        window.onload = () => {
             // Set up WebRTC connection
             socket.on('offer', async (offer) => {
                 peerConnection = new RTCPeerConnection(configuration);
