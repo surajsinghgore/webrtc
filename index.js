@@ -12,16 +12,26 @@ app.use(express.static('public'));
 io.on('connection', socket => {
     console.log('New client connected');
 
-    socket.on('offer', offer => {
-        socket.broadcast.emit('offer', offer);
+    // Join a room
+    socket.on('join-room', (roomId) => {
+        socket.join(roomId);
+        console.log(`User joined room: ${roomId}`);
     });
 
-    socket.on('answer', answer => {
-        socket.broadcast.emit('answer', answer);
+    socket.on('offer', (roomId, offer) => {
+        socket.to(roomId).emit('offer', offer);
     });
 
-    socket.on('ice-candidate', candidate => {
-        socket.broadcast.emit('ice-candidate', candidate);
+    socket.on('answer', (roomId, answer) => {
+        socket.to(roomId).emit('answer', answer);
+    });
+
+    socket.on('ice-candidate', (roomId, candidate) => {
+        socket.to(roomId).emit('ice-candidate', candidate);
+    });
+
+    socket.on('chat-message', (roomId, message) => {
+        socket.to(roomId).emit('chat-message', message);
     });
 
     socket.on('disconnect', () => {
